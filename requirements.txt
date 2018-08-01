@@ -1,0 +1,9 @@
+flake8
+flake8-quotes
+flask
+jupyter
+numpy
+pandas
+pytest
+seaborn
+scipy
