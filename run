@@ -3,9 +3,22 @@
 import argparse
 import subprocess
 import time
+import os
 
 IMAGE = 'flategy'
 NOTEBOOK = 'flategy-notebook'
+
+LIBRARIES = {
+    'static/lib': [
+        ('jquery.js', 'https://code.jquery.com/jquery-3.3.1.slim.min.js'),
+        ('bootstrap.css', 'https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css'),
+        ('bootstrap.js', 'https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js'),
+        ('popper.js', 'https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js'),
+    ],
+    'include': [
+        ('catch.hpp', 'https://github.com/catchorg/Catch2/releases/download/v2.3.0/catch.hpp'),
+    ]
+}
 
 
 def sh(cmd, **args):
@@ -15,8 +28,12 @@ def sh(cmd, **args):
 
 
 def build():
-    sh('docker build --rm -t ${IMAGE} .',
-       IMAGE=IMAGE)
+    for base, libraries in LIBRARIES.items():
+        sh('mkdir -p {base}', base=base)
+        for name, src in libraries:
+            sh('wget -qO {dest} {src}', src=src, dest=os.path.join(base, name))
+    sh('docker build --rm -t {image} .',
+       image=IMAGE)
 
 
 def run(command):

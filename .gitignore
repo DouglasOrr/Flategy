@@ -1,4 +1,6 @@
 local/
+include/
+static/
 *.pyc
 __pycache__/
 .pytest_cache/
