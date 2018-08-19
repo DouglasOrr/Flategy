@@ -46,13 +46,14 @@ def run(command):
 def test():
     run(['pytest flategy'])
     run(['flake8'])
+    run(['./scripts/build_lib test'])
 
 
 def notebook():
     sh('docker rm -f {name} || true',
        name=NOTEBOOK)
     sh('docker run -d --name {name} -v `pwd`:/work -w /work'
-       ' -p 8888:8888 -e PYTHONPATH=/work'
+       ' -p 8888:8888 -e PYTHONPATH=/work:/work/build'
        ' {image}'
        ' jupyter notebook'
        ' --port 8888 --no-browser --allow-root --ip="*"',
