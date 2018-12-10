@@ -6,7 +6,7 @@ SRC="${BASE}/src"
 
 CFLAGS_DEBUG="-O0 -g"
 CFLAGS_RELEASE="-O3 -mtune=native"
-CFLAGS_COMMON="-fpic -Wall -Wextra -Werror -std=c++14 -I ${BASE}/include -I/usr/include/python3.6m/ -I/usr/local/lib/python3.6/dist-packages/numpy/core/include/"
+CFLAGS_COMMON="-fpic -Wall -Wextra -Werror -std=c++17 -I ${BASE}/include -I/usr/include/python3.6m/ -I/usr/local/lib/python3.6/dist-packages/numpy/core/include/"
 
 CFLAGS="${CFLAGS_DEBUG} ${CFLAGS_COMMON}"
 
