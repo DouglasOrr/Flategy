@@ -4,7 +4,7 @@ using namespace flategy;
 
 namespace {
 
-    class Impl : public Game {
+    struct Impl : Game {
         void tick(const TickData& options);
         Snapshot view() const;
     };

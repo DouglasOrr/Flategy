@@ -80,7 +80,7 @@ namespace flategy {
     // ---------- Behaviour ----------
 
     // "Game" knows how to play out a Flategy game
-    class Game {
+    struct Game {
         virtual ~Game();
         virtual void tick(const TickData& options) = 0;
         virtual Snapshot view() const = 0;
