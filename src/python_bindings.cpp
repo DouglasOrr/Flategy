@@ -3,12 +3,6 @@
 #include "numpy/arrayobject.h"
 #include "flategy.hpp"
 
-namespace flategy {
-
-    const char* Docstring = "Core native logic for the RTS game Flategy";
-
-} // namespace flategy
-
 namespace {
 
     PyObject* hello_world(PyObject*, PyObject*) {

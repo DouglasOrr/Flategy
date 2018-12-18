@@ -1,9 +1,7 @@
 flake8
 flake8-quotes
 flask
-http://download.pytorch.org/whl/cu92/torch-0.4.1-cp36-cp36m-linux_x86_64.whl
 jupyter
-lru-dict
 ninja
 numpy
 pandas

@@ -37,6 +37,7 @@ def generate(build_file, release):
                        variant_flags='-O3 -mtune=native' if release else '-O0 -g',
                        include_flags=' '.join('-I ' + d for d in [
                            '$projectdir/include',
+                           '$builddir/gen',
                            '$builddir/third-party/include',
                            '/usr/include/python3.6m',
                            '/usr/local/lib/python3.6/dist-packages/numpy/core/include']),
@@ -46,25 +47,37 @@ def generate(build_file, release):
         n.rule('cxx', '$cxx $cxxflags $in -MMD -MF $out.d -o $out', depfile='$out.d', deps='gcc')
         n.rule('link', '$cxx $linkflags $in -o $out $libs')
         n.rule('download', 'wget -qO $out $url')
+        n.rule('flatc', 'flatc --python --cpp --gen-object-api -o $dir $in')
+
+        # Pre-build
 
         n.build('$builddir/third-party/include/catch.hpp',
                 'download',
                 variables=dict(url='https://github.com/catchorg/Catch2/releases/download/v2.3.0/catch.hpp'))
 
+        n.build('$builddir/gen/flategy_data_generated.h',
+                'flatc',
+                '$projectdir/src/flategy_data.fbs',
+                variables=dict(dir='$builddir/gen'),
+                implicit_outputs='$builddir/gen/flategy_data/')
+
+        # Main build
+
         for cpp in glob_from('src', '**/*.cpp'):
-            n.build('$builddir/{}.o'.format(stripext(cpp)),
+            n.build('$builddir/obj/{}.o'.format(stripext(cpp)),
                     'cxx',
                     '$projectdir/src/{}'.format(cpp),
-                    order_only='$builddir/third-party/include/catch.hpp')
+                    order_only=['$builddir/third-party/include/catch.hpp',
+                                '$builddir/gen/flategy_data_generated.h'])
 
         n.build('$builddir/libflategy.so',
                 'link',
-                ['$builddir/{}.o'.format(stripext(cpp)) for cpp in glob_from('src', '*.cpp')],
+                ['$builddir/obj/{}.o'.format(stripext(cpp)) for cpp in glob_from('src', '*.cpp')],
                 variables=dict(libs='-lpython3.6m', linkflags='-shared'))
 
-        n.build('$builddir/test/main',
+        n.build('$builddir/tests',
                 'link',
-                ['$builddir/{}.o'.format(stripext(cpp)) for cpp in glob_from('src', 'test/*.cpp')],
+                ['$builddir/obj/{}.o'.format(stripext(cpp)) for cpp in glob_from('src', 'test/*.cpp')],
                 variables=dict(libs='-L$builddir -lflategy'),
                 implicit='$builddir/libflategy.so')
 
@@ -72,12 +85,19 @@ def generate(build_file, release):
 def build(targets, **generate_args):
     generate(**generate_args)
     sh('ninja {targets}', targets=' '.join(targets))
+    # Make sure we can easily view the built files
+    sh('find build -type d -exec chmod ugo+rx {{}} +')
+    sh('find build -type f -exec chmod ugo+r {{}} +')
 
 
 def test(**generate_args):
-    build(['build/test/main'], **generate_args)
+    print('### Building...')
+    build(['build/tests'], **generate_args)
+    print('### C++ tests...')
+    sh('env LD_LIBRARY_PATH=build ./build/tests')
+    print('### Python tests...')
     sh('pytest flategy')
-    sh('env LD_LIBRARY_PATH=build ./build/test/main')
+    print('### Python lint...')
     sh('flake8')
 
 
