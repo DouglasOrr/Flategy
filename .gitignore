@@ -1,8 +1,8 @@
 build/
 local/
-include/
 static/
 
+*.ninja
 *.pyc
 __pycache__/
 .pytest_cache/

@@ -9,6 +9,7 @@ RUN apt-get update          \
        python3              \
        python3-dev          \
        python3-pip          \
+       wget                 \
     && apt-get clean
 
 COPY . /app

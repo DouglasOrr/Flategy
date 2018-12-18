@@ -6,8 +6,8 @@ Goal: a playable RTS game with an interesting bot behaviour.
 
 Install Docker & run the following:
 
-    ./run build
-    ./run notebook
+    ./run -r
+    ./scripts/notebook
 
 ## The game
 

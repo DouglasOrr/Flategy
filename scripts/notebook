@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+
+import subprocess
+import time
+
+
+def sh(cmd, **args):
+    code = subprocess.call(cmd.format(**args), shell=True)
+    if code:
+        exit(code)
+
+
+notebook = 'flategy-notebook'
+
+sh('docker rm -f {name} || true', name=notebook)
+sh('docker run -d --name {name} -v `pwd`:/work -w /work'
+   ' -p 8888:8888 -e PYTHONPATH=/work:/work/build'
+   ' flategy'
+   ' jupyter notebook'
+   ' --port 8888 --no-browser --allow-root --ip=0.0.0.0',
+   name=notebook)
+time.sleep(1)
+sh('docker logs {name}', name=notebook)

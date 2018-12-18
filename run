@@ -1,24 +1,7 @@
 #!/usr/bin/env python3
 
-import argparse
 import subprocess
-import time
-import os
-
-IMAGE = 'flategy'
-NOTEBOOK = 'flategy-notebook'
-
-LIBRARIES = {
-    'static/lib': [
-        ('jquery.js', 'https://code.jquery.com/jquery-3.3.1.slim.min.js'),
-        ('bootstrap.css', 'https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css'),
-        ('bootstrap.js', 'https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js'),
-        ('popper.js', 'https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js'),
-    ],
-    'include': [
-        ('catch.hpp', 'https://github.com/catchorg/Catch2/releases/download/v2.3.0/catch.hpp'),
-    ]
-}
+import sys
 
 
 def sh(cmd, **args):
@@ -27,58 +10,19 @@ def sh(cmd, **args):
         exit(code)
 
 
-def build():
-    for base, libraries in LIBRARIES.items():
-        sh('mkdir -p {base}', base=base)
-        for name, src in libraries:
-            sh('wget -qO {dest} {src}', src=src, dest=os.path.join(base, name))
-    sh('docker build --rm -t {image} .',
-       image=IMAGE)
+argv = sys.argv[1:]
+
+# Helper for rebuilding the docker image on demand
+rebuild = False
+if argv and argv[0] == '-r':
+    rebuild = True
+    argv = argv[1:]
+elif subprocess.call('docker image inspect flategy 1> /dev/null', shell=True):
+    rebuild = True
+if rebuild:
+    sh('./scripts/build_image')
 
 
-def run(command):
-    sh('docker run --rm -it -v `pwd`:/work -w /work'
-       ' {image} {command}',
-       image=IMAGE,
-       command=' '.join(command))
-
-
-def test():
-    run(['pytest flategy'])
-    run(['flake8'])
-    run(['./scripts/build_lib test'])
-
-
-def notebook():
-    sh('docker rm -f {name} || true',
-       name=NOTEBOOK)
-    sh('docker run -d --name {name} -v `pwd`:/work -w /work'
-       ' -p 8888:8888 -e PYTHONPATH=/work:/work/build'
-       ' {image}'
-       ' jupyter notebook'
-       ' --port 8888 --no-browser --allow-root --ip="*"',
-       name=NOTEBOOK,
-       image=IMAGE)
-    time.sleep(1)
-    sh('docker logs {name}', name=NOTEBOOK)
-
-
-parser = argparse.ArgumentParser(
-    description='Runner script for Flategy'
-)
-parser.set_defaults(action=lambda: parser.print_help())
-subs = parser.add_subparsers()
-
-subs.add_parser('build').set_defaults(action=build)
-
-p = subs.add_parser('run')
-p.add_argument('command', nargs='*', default=[])
-p.set_defaults(action=run)
-
-subs.add_parser('test').set_defaults(action=test)
-
-subs.add_parser('notebook').set_defaults(action=notebook)
-
-args = vars(parser.parse_args())
-action = args.pop('action')
-action(**args)
+sh('docker run --rm -it -v `pwd`:/work -w /work flategy'
+   ' python3 scripts/run.py {command}',
+   command=' '.join(argv))
