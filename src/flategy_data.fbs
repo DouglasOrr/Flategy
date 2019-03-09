@@ -22,7 +22,7 @@ enum UnitType : byte {
 table StopInstruction { }
 
 table DefendInstruction {
-    destination:Vec2;
+    destination:Vec2; // optional
 }
 
 table MoveInstruction {

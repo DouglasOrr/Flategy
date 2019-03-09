@@ -1,9 +1,33 @@
 #include "Python.h"
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-#include "numpy/arrayobject.h"
 #include "flategy.hpp"
 
 namespace {
+
+    // Core data
+
+    template<class T>
+    const T* to_cpp(PyObject* bytes) {
+        return flatbuffers::GetRoot<T>(PyBytes_AsString(bytes));
+    }
+
+    template<class T>
+    PyObject* to_python(const T*
+
+    // Interface management
+
+    flategy::Game* get_game(PyObject* obj) {
+        return reinterpret_cast<flategy::Game*>(PyCapsule_GetPointer(obj, nullptr));
+    }
+
+    void delete_game(PyObject* obj) {
+        delete get_game(obj);
+    }
+
+    PyObject* create_game(PyObject* options_buffer) {
+        return PyCapsule_New(flategy::create_game(...), nullptr, delete_game);
+    }
+
+    // Module
 
     PyObject* hello_world(PyObject*, PyObject*) {
         return PyUnicode_FromString("hello from C++");
@@ -18,7 +42,7 @@ namespace {
     struct PyModuleDef module = {
         PyModuleDef_HEAD_INIT,
         "libflategy",
-        flategy::Docstring,
+        "Core native logic for the RTS game Flategy",
         -1,
         methods,
         nullptr,
@@ -27,10 +51,8 @@ namespace {
         nullptr
     };
 
-
 } // namespace (anonymous)
 
 PyMODINIT_FUNC PyInit_libflategy() {
-    import_array();
     return PyModule_Create(&module);
 }
