@@ -1,8 +1,7 @@
-build/
 local/
 static/
 
-*.ninja
 *.pyc
 __pycache__/
 .pytest_cache/
+.coverage

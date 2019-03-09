@@ -2,27 +2,102 @@
 
 import subprocess
 import sys
+import argparse
+import os
+import time
 
 
-def sh(cmd, **args):
-    code = subprocess.call(cmd.format(**args), shell=True)
-    if code:
-        exit(code)
+IMAGE = 'flategy'
 
 
-argv = sys.argv[1:]
-
-# Helper for rebuilding the docker image on demand
-rebuild = False
-if argv and argv[0] == '-r':
-    rebuild = True
-    argv = argv[1:]
-elif subprocess.call('docker image inspect flategy 1> /dev/null', shell=True):
-    rebuild = True
-if rebuild:
-    sh('./scripts/build_image')
+def sh(cmd, **kwargs):
+    shell_cmd = cmd.format(**kwargs)
+    if subprocess.call(shell_cmd, shell=True):
+        sys.stderr.write('[[./run]] Command failed: {}\n'.format(shell_cmd))
+        exit(1)
 
 
-sh('docker run --rm -it -v `pwd`:/work -w /work flategy'
-   ' python3 scripts/run.py {command}',
-   command=' '.join(argv))
+def docker(cmd, docker_detach=False, docker_args='', **kwargs):
+    docker_cmd = cmd.format(**kwargs)
+    is_tty = os.isatty(sys.stdin.fileno())
+    sh('docker run {mode}'
+       ' -v `pwd`:/flategy -w /flategy -e PYTHONPATH=/flategy'
+       ' {docker_args}'
+       ' {image} {command}',
+       image=IMAGE,
+       command=docker_cmd,
+       mode='-d' if docker_detach else ('--rm -i' + (' -t' if is_tty else '')),
+       docker_args=docker_args)
+
+
+def _download_js():
+    base = 'static/lib'
+    libraries = [
+        ('jquery.js', 'https://code.jquery.com/jquery-3.3.1.slim.min.js'),
+        ('bootstrap.css', 'https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css'),
+        ('bootstrap.js', 'https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js'),
+        ('popper.js', 'https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js'),
+    ]
+    sh('mkdir -p {base}', base=base)
+    for name, src in libraries:
+        sh('wget -qO {dest} {src}', src=src, dest=os.path.join(base, name))
+
+
+def build():
+    sh('docker build --rm -t {image} .', image=IMAGE)
+    _download_js()
+
+
+def run(args):
+    docker(' '.join(args))
+
+
+def test(filter):
+    docker('pytest {cov_or_filter}',
+           cov_or_filter=('-s -k ' + filter
+                          if filter else
+                          ' --cov=flategy --no-cov-on-fail --cov-report term-missing'))
+
+
+def check():
+    test(filter=None)
+    docker('flake8 flategy run')
+    docker('pylint --errors-only flategy run')
+
+
+def notebook(port):
+    name = '$USER-flategy-notebook'
+    sh('docker rm -f {name} || true', name=name)
+    docker('jupyter notebook --allow-root --port {port} --ip 0.0.0.0',
+           docker_detach=True,
+           docker_args='--name {name} -p {port}:{port} -e JUPYTER_ENABLE_LAB=true'.format(
+               port=port, name=name),
+           port=port)
+
+    print('Waiting for server to start, so we can tell you your token...')
+    time.sleep(2)
+    token = subprocess.check_output(
+        'docker logs {name} 2>&1 | grep -oE \'\\?token=.+$\' | head -1'.format(name=name),
+        shell=True).decode('utf8').strip()
+    print('\nSee: http://localhost:{port}/lab{token}'.format(port=port, token=token))
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Development runner for flategy')
+    parser.set_defaults(action=lambda: parser.print_help())
+    subs = parser.add_subparsers()
+
+    subs.add_parser('build', help='build the Docker image').set_defaults(action=build)
+    p = subs.add_parser('run', help='run an arbitrary command in the image')
+    p.add_argument('args', nargs='*', help='command/arguments to pass to the image')
+    p.set_defaults(action=run)
+    p = subs.add_parser('test', help='run unit tests')
+    p.add_argument('-k', '--filter', help='filter tests matching this pattern')
+    p.set_defaults(action=test)
+    subs.add_parser('check', help='run all checks (including slow tests)').set_defaults(action=check)
+    p = subs.add_parser('notebook', help='run dev notebook')
+    p.add_argument('--port', default='8888', help='port to serve on')
+    p.set_defaults(action=notebook)
+
+    args = vars(parser.parse_args())
+    args.pop('action')(**args)
