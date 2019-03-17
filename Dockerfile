@@ -3,6 +3,8 @@ FROM nvidia/cuda:10.0-cudnn7-devel
 RUN apt-get update          \
     && apt-get install -qy  \
        ffmpeg               \
+       inkscape             \
+       libcairo2-dev        \
        python3              \
        python3-dev          \
        python3-pip          \

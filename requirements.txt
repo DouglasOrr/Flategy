@@ -4,9 +4,11 @@ flask
 jupyter
 jupyterlab
 matplotlib
+networkx
 numpy
 pandas
 pdoc3
+pycairo
 pydocstyle
 pylint
 pytest

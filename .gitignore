@@ -1,7 +1,8 @@
 local/
 static/
 
+.coverage
+.ipynb_checkpoints/
 *.pyc
 __pycache__/
 .pytest_cache/
-.coverage
