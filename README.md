@@ -37,3 +37,9 @@ Flategy is played on a 2D world, the objective is to destroy the opponent's base
  - player control: set command = STOP|MOVE(x,y)|ATTACK(unit)
  - types: agile|ranged|strong
  - finite health, regenerates near to base
+
+## References
+
+ - "On The Development Of A Free Rts Game Engine" (Michael Buro and Timothy Furtak)
+ - "Rokkatan: Scaling an RTS Game Design to the Massively Multiplayer Realm" (Jens Müller and Sergei Gorlatch)
+ - "Stratagus: An Open-Source Game Engine for Research in Real-Time Strategy Games" (Marc J.V. Ponsen et. al.)
