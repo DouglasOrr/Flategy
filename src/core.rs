@@ -8,18 +8,23 @@ pub struct Point {
 }
 
 #[derive(Debug, Copy, Clone)]
-struct UnitID {
-    index: u32,
+pub struct UnitID {
+    pub index: u32,
 }
 
 #[derive(Debug, Copy, Clone)]
-struct PlayerID {
-    index: u16,
+pub struct PlayerID {
+    pub index: u16,
 }
 
 #[derive(Debug, Copy, Clone)]
-struct GroupID {
-    index: u8,
+pub struct GroupID {
+    pub index: u8,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct Food {
+    pub amount: u32,
 }
 
 struct Units {
@@ -66,7 +71,7 @@ impl World {
     fn set_command(&mut self, player: PlayerID, group: GroupID, command: Option<Point>) {
         self.commands[player.index as usize].insert(group.index as usize, command);
     }
-} // World
+}
 
 #[cfg(test)]
 mod tests {
