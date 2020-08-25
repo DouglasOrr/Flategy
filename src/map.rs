@@ -12,20 +12,20 @@ enum Tile {
     Spawn(core::PlayerID),
 }
 
-struct Map {
+pub struct Map {
     cells: util::Grid<(usize, usize), Tile>,
 }
 
 impl Map {
-    fn width(&self) -> usize {
+    pub fn width(&self) -> usize {
         self.cells.shape().0
     }
 
-    fn height(&self) -> usize {
+    pub fn height(&self) -> usize {
         self.cells.shape().1
     }
 
-    fn generate(seed: u64) -> Map {
+    pub fn generate(seed: u64) -> Map {
         let mut rng = StdRng::seed_from_u64(seed);
 
         // Overall map
@@ -75,12 +75,12 @@ impl Map {
         }
     }
 
-    fn dump(&self) -> String {
-        self.cells
+    pub fn dump(&self) -> String {
+        let body: String = self.cells
             .data()
             .chunks(self.width())
             .map(|chunk| {
-                chunk
+                let row: String = chunk
                     .iter()
                     .map(|cell| match cell {
                         Tile::Empty => "  ",
@@ -88,10 +88,13 @@ impl Map {
                         Tile::Food(_) => "::",
                         Tile::Spawn(_) => "()",
                     })
-                    .collect()
+                    .collect();
+                format!("| {} |", row)
             })
             .intersperse("\n".to_string())
-            .collect()
+            .collect();
+        let hline = "-".repeat(2 * self.width());
+        format!("+-{}-+\n{}\n+-{}-+", hline, body, hline)
     }
 }
 

@@ -4,10 +4,6 @@ version = "0.1.0"
 authors = ["douglas"]
 edition = "2018"
 
-[[bin]]
-name = "server"
-path = "src/server.rs"
-
 [dependencies]
 itertools = "0.9.0"
 rand = "0.7.3"
