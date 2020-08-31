@@ -4,12 +4,12 @@ use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 
 impl core::Map {
-    pub fn generate(seed: u64) -> core::Map {
+    pub fn generate_2p(seed: u64) -> core::Map {
         let mut rng = StdRng::seed_from_u64(seed);
 
         // Overall map
         let mut map = core::Map {
-            cells: util::Grid::new(
+            tiles: util::Grid::new(
                 (rng.gen_range(10, 15), rng.gen_range(10, 15)),
                 &core::Tile::Empty,
             ),
@@ -20,20 +20,20 @@ impl core::Map {
             rng.gen_range(0, map.width() / 3),
             rng.gen_range(0, map.height() / 3),
         );
-        map.cells[spawn_0] = core::Tile::Spawn(core::PlayerID(0));
+        map.tiles[spawn_0] = core::Tile::Spawn(core::PlayerID(0));
         let spawn_1 = (map.width() - 1 - spawn_0.0, map.height() - 1 - spawn_0.1);
-        map.cells[spawn_1] = core::Tile::Spawn(core::PlayerID(1));
+        map.tiles[spawn_1] = core::Tile::Spawn(core::PlayerID(1));
 
         // Food
         map.generate_tiles(
-            rng.gen_range(map.cells.len() / 20, map.cells.len() / 10),
-            || core::Tile::Food(core::Food { amount: 100 }),
+            rng.gen_range(map.tiles.len() / 20, map.tiles.len() / 10),
+            || core::Tile::Food { max_workers: 4 },
             &mut rng,
         );
 
         // Walls
         map.generate_tiles(
-            rng.gen_range(map.cells.len() / 10, map.cells.len() / 4),
+            rng.gen_range(map.tiles.len() / 10, map.tiles.len() / 4),
             || core::Tile::Wall,
             &mut rng,
         );
@@ -50,8 +50,8 @@ impl core::Map {
                 rng.gen_range(0, self.width()),
                 rng.gen_range(0, self.height()),
             );
-            match self.cells[index] {
-                core::Tile::Empty => self.cells[index] = generate(),
+            match self.tiles[index] {
+                core::Tile::Empty => self.tiles[index] = generate(),
                 _ => (),
             }
         }
@@ -63,9 +63,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_generate() {
-        let map = core::Map::generate(75);
-        assert!(map.width() * map.height() == map.cells.len());
+    fn test_generate_2p() {
+        let map = core::Map::generate_2p(75);
+        assert!(map.width() * map.height() == map.tiles.len());
 
         assert_eq!(2, map.n_players());
 

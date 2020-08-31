@@ -10,6 +10,6 @@ fn main() {
     } else {
         rng.gen()
     };
-    let map = libflategy::core::Map::generate(seed);
+    let map = libflategy::core::Map::generate_2p(seed);
     println!("{}", map.dump());
 }
