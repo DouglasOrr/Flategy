@@ -76,7 +76,8 @@ impl Map {
     }
 
     pub fn dump(&self) -> String {
-        let body: String = self.cells
+        let body: String = self
+            .cells
             .data()
             .chunks(self.width())
             .map(|chunk| {
