@@ -1,5 +1,6 @@
 /// Core Flategy game constructs
 use super::util;
+use itertools::Itertools;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Point {
@@ -32,6 +33,51 @@ struct Units {
     alive: Vec<bool>,     // N
     owner: Vec<PlayerID>, // N
     group: Vec<GroupID>,  // N
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum Tile {
+    Empty,
+    Wall,
+    Food(Food),
+    Spawn(PlayerID),
+}
+
+pub struct Map {
+    pub cells: util::Grid<(usize, usize), Tile>,
+}
+
+impl Map {
+    pub fn width(&self) -> usize {
+        self.cells.shape().0
+    }
+
+    pub fn height(&self) -> usize {
+        self.cells.shape().1
+    }
+
+    pub fn dump(&self) -> String {
+        let body: String = self
+            .cells
+            .data()
+            .chunks(self.width())
+            .map(|chunk| {
+                let row: String = chunk
+                    .iter()
+                    .map(|cell| match cell {
+                        Tile::Empty => "  ",
+                        Tile::Wall => "##",
+                        Tile::Food(_) => "::",
+                        Tile::Spawn(_) => "()",
+                    })
+                    .collect();
+                format!("| {} |", row)
+            })
+            .intersperse("\n".to_string())
+            .collect();
+        let hline = "-".repeat(2 * self.width());
+        format!("+-{}-+\n{}\n+-{}-+", hline, body, hline)
+    }
 }
 
 struct World {
