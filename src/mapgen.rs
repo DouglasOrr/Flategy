@@ -20,9 +20,9 @@ impl core::Map {
             rng.gen_range(0, map.width() / 3),
             rng.gen_range(0, map.height() / 3),
         );
-        map.cells[spawn_0] = core::Tile::Spawn(core::PlayerID { index: 0 });
+        map.cells[spawn_0] = core::Tile::Spawn(core::PlayerID(0));
         let spawn_1 = (map.width() - 1 - spawn_0.0, map.height() - 1 - spawn_0.1);
-        map.cells[spawn_1] = core::Tile::Spawn(core::PlayerID { index: 1 });
+        map.cells[spawn_1] = core::Tile::Spawn(core::PlayerID(1));
 
         // Food
         map.generate_tiles(
@@ -63,7 +63,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_map() {
+    fn test_generate() {
         let map = core::Map::generate(75);
         assert!(map.width() * map.height() == map.cells.len());
 

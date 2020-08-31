@@ -9,19 +9,13 @@ pub struct Point {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct UnitID {
-    pub index: u32,
-}
+pub struct UnitID(pub u32);
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct PlayerID {
-    pub index: u16,
-}
+pub struct PlayerID(pub u16);
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct GroupID {
-    pub index: u8,
-}
+pub struct GroupID(pub u16);
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Food {
@@ -53,8 +47,8 @@ pub struct Map {
 impl Map {
     pub fn empty_2p(size: usize) -> Self {
         let mut grid = util::Grid::new((size, size), &Tile::Empty);
-        grid[(0, 0)] = Tile::Spawn(PlayerID { index: 0 });
-        grid[(size - 1, size - 1)] = Tile::Spawn(PlayerID { index: 1 });
+        grid[(0, 0)] = Tile::Spawn(PlayerID(0));
+        grid[(size - 1, size - 1)] = Tile::Spawn(PlayerID(1));
         Map { cells: grid }
     }
 
@@ -148,15 +142,15 @@ impl World {
         units.position.push(spawn);
         units.alive.push(true);
         units.owner.push(player);
-        units.group.push(GroupID { index: 0 });
+        units.group.push(GroupID(0));
     }
 
     fn assign_group(&mut self, unit: UnitID, group: GroupID) {
-        self.units.group[unit.index as usize] = group;
+        self.units.group[unit.0 as usize] = group;
     }
 
     fn set_command(&mut self, player: PlayerID, group: GroupID, command: Option<Point>) {
-        self.commands[player.index as usize].insert(group.index as usize, command);
+        self.commands[player.0 as usize].insert(group.0 as usize, command);
     }
 }
 
@@ -165,13 +159,23 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_map() {
+        let map = Map::empty_2p(5);
+        assert_eq!(5, map.width());
+        assert_eq!(5, map.height());
+        assert_eq!(2, map.n_players());
+        assert_eq!(Point {x: 0.5, y: 0.5}, map.find_spawn(&PlayerID(0)));
+        assert_eq!(Point {x: 4.5, y: 4.5}, map.find_spawn(&PlayerID(1)));
+    }
+
+    #[test]
     fn test_spawn() {
         let mut world = World::create(Map::empty_2p(5));
-        world.spawn(PlayerID { index: 0 });
-        world.assign_group(UnitID { index: 0 }, GroupID { index: 1 });
+        world.spawn(PlayerID(0));
+        world.assign_group(UnitID(0), GroupID(1));
         world.set_command(
-            PlayerID { index: 0 },
-            GroupID { index: 1 },
+            PlayerID(0),
+            GroupID(1),
             Some(Point { x: 2.5, y: 0.5 }),
         );
         assert_eq!(1, world.units.position.len());
