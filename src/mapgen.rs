@@ -67,6 +67,8 @@ mod tests {
         let map = core::Map::generate(75);
         assert!(map.width() * map.height() == map.cells.len());
 
+        assert_eq!(2, map.n_players());
+
         let dump = map.dump();
         println!("{}", dump);
         assert!(dump.matches("()").count() == 2);

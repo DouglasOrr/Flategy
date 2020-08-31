@@ -43,7 +43,8 @@ impl<T> Index<usize> for VecMap<T> {
 pub trait GridIndex: Copy + std::fmt::Debug {
     fn size(self) -> usize;
     fn in_bounds(self, index: Self) -> bool;
-    fn offset(self, index: Self) -> usize;
+    fn to_offset(self, index: Self) -> usize;
+    fn from_offset(self, offset: usize) -> Self;
 }
 
 impl GridIndex for (usize, usize) {
@@ -53,8 +54,11 @@ impl GridIndex for (usize, usize) {
     fn in_bounds(self, index: Self) -> bool {
         index.0 < self.0 && index.1 < self.1
     }
-    fn offset(self, index: Self) -> usize {
+    fn to_offset(self, index: Self) -> usize {
         index.0 + index.1 * self.0
+    }
+    fn from_offset(self, offset: usize) -> Self {
+        (offset % self.0, offset / self.0)
     }
 }
 
@@ -65,14 +69,22 @@ impl GridIndex for (usize, usize, usize) {
     fn in_bounds(self, index: Self) -> bool {
         index.0 < self.0 && index.1 < self.1 && index.2 < self.2
     }
-    fn offset(self, index: Self) -> usize {
+    fn to_offset(self, index: Self) -> usize {
         index.0 + index.1 * self.0 + index.2 * self.0 * self.1
+    }
+    fn from_offset(self, offset: usize) -> Self {
+        (
+            offset % self.0,
+            (offset / self.0) % self.1,
+            offset / (self.0 * self.1),
+        )
     }
 }
 
 // Grid
 
 /// An N-Dimensional grid of items, stored flattened in a Vec
+#[derive(Clone)]
 pub struct Grid<I, T> {
     shape: I,
     data: Vec<T>,
@@ -103,13 +115,22 @@ where
         &self.data
     }
     pub fn len(&self) -> usize {
-        self.shape.size()
+        self.data.len()
     }
-    fn checked_offset(&self, index: I) -> usize {
+    pub fn from_offset(&self, offset: usize) -> I {
+        if self.len() <= offset {
+            panic!(
+                "offset {:?} out of bounds for shape {:?}",
+                offset, self.shape
+            );
+        }
+        self.shape.from_offset(offset)
+    }
+    pub fn to_offset(&self, index: I) -> usize {
         if !self.shape.in_bounds(index) {
             panic!("index {:?} out of bounds for shape {:?}", index, self.shape);
         }
-        self.shape.offset(index)
+        self.shape.to_offset(index)
     }
 }
 
@@ -120,7 +141,7 @@ where
     type Output = T;
 
     fn index(&self, index: I) -> &Self::Output {
-        &self.data[self.checked_offset(index)]
+        &self.data[self.to_offset(index)]
     }
 }
 
@@ -129,7 +150,7 @@ where
     I: GridIndex,
 {
     fn index_mut(&mut self, index: I) -> &mut Self::Output {
-        let offset = self.checked_offset(index);
+        let offset = self.to_offset(index);
         &mut self.data[offset]
     }
 }
@@ -183,6 +204,10 @@ mod tests {
                 for k in 0..(grid.shape.2) {
                     assert!(!grid[(i, j, k)]);
                     grid[(i, j, k)] = true;
+
+                    let offset = grid.to_offset((i, j, k));
+                    assert!(offset < grid.data().len());
+                    assert!(grid.from_offset(offset) == (i, j, k));
                 }
             }
         }

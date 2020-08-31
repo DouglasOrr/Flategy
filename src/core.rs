@@ -8,31 +8,31 @@ pub struct Point {
     pub y: f32,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct UnitID {
     pub index: u32,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct PlayerID {
     pub index: u16,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct GroupID {
     pub index: u8,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Food {
     pub amount: u32,
 }
 
 struct Units {
-    position: Vec<Point>, // N
-    alive: Vec<bool>,     // N
-    owner: Vec<PlayerID>, // N
-    group: Vec<GroupID>,  // N
+    position: Vec<Point>, // U
+    alive: Vec<bool>,     // U
+    owner: Vec<PlayerID>, // U
+    group: Vec<GroupID>,  // U
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -43,17 +43,58 @@ pub enum Tile {
     Spawn(PlayerID),
 }
 
+type Coordinate = (usize, usize);
+
+#[derive(Clone)]
 pub struct Map {
-    pub cells: util::Grid<(usize, usize), Tile>,
+    pub cells: util::Grid<Coordinate, Tile>,
 }
 
 impl Map {
+    pub fn empty_2p(size: usize) -> Self {
+        let mut grid = util::Grid::new((size, size), &Tile::Empty);
+        grid[(0, 0)] = Tile::Spawn(PlayerID { index: 0 });
+        grid[(size - 1, size - 1)] = Tile::Spawn(PlayerID { index: 1 });
+        Map { cells: grid }
+    }
+
+    pub fn center(coordinate: Coordinate) -> Point {
+        Point {
+            x: coordinate.0 as f32 + 0.5,
+            y: coordinate.1 as f32 + 0.5,
+        }
+    }
+
     pub fn width(&self) -> usize {
         self.cells.shape().0
     }
 
     pub fn height(&self) -> usize {
         self.cells.shape().1
+    }
+
+    pub fn n_players(&self) -> usize {
+        self.cells
+            .data()
+            .iter()
+            .filter(|x| match x {
+                Tile::Spawn(_) => true,
+                _ => false,
+            })
+            .count()
+    }
+
+    pub fn find_spawn(&self, player: &PlayerID) -> Point {
+        let found = self.cells.data().iter().enumerate().find(|(_, x)| match x {
+            Tile::Spawn(p) if p == player => true,
+            _ => false,
+        });
+
+        if let Some((idx, _)) = found {
+            Self::center(self.cells.from_offset(idx))
+        } else {
+            panic!("Player {:?} was not found in map", player);
+        }
     }
 
     pub fn dump(&self) -> String {
@@ -81,28 +122,28 @@ impl Map {
 }
 
 struct World {
-    units: Units,
-    spawns: Vec<Point>,                 // P
+    map: Map,
+    units: Units,                       // U
     commands: Vec<util::VecMap<Point>>, // P.G
 }
 
 impl World {
-    fn create(spawns: Vec<Point>) -> World {
-        let commands = (0..spawns.len()).map(|_| util::VecMap::new()).collect();
+    fn create(map: Map) -> World {
+        let commands = (0..map.n_players()).map(|_| util::VecMap::new()).collect();
         World {
+            map: map,
             units: Units {
                 position: Vec::new(),
                 alive: Vec::new(),
                 owner: Vec::new(),
                 group: Vec::new(),
             },
-            spawns: spawns,
             commands: commands,
         }
     }
 
     fn spawn(&mut self, player: PlayerID) {
-        let spawn = self.spawns[player.index as usize];
+        let spawn = self.map.find_spawn(&player);
         let units = &mut self.units;
         units.position.push(spawn);
         units.alive.push(true);
@@ -125,15 +166,15 @@ mod tests {
 
     #[test]
     fn test_spawn() {
-        let mut world = World::create(vec![Point { x: 10.0, y: 10.0 }, Point { x: 90.0, y: 90.0 }]);
+        let mut world = World::create(Map::empty_2p(5));
         world.spawn(PlayerID { index: 0 });
         world.assign_group(UnitID { index: 0 }, GroupID { index: 1 });
         world.set_command(
             PlayerID { index: 0 },
             GroupID { index: 1 },
-            Some(Point { x: 50.0, y: 50.0 }),
+            Some(Point { x: 2.5, y: 0.5 }),
         );
         assert_eq!(1, world.units.position.len());
-        assert_eq!(Some(Point { x: 50.0, y: 50.0 }), world.commands[0][1]);
+        assert_eq!(Some(Point { x: 2.5, y: 0.5 }), world.commands[0][1]);
     }
 }
