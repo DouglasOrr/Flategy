@@ -1,0 +1,126 @@
+#!/usr/bin/env python3
+
+"""All-in-one runner/builder management script for Flategy."""
+
+import argparse
+import functools as ft
+import os
+import subprocess
+import time
+
+
+# Helpers
+
+
+sh = ft.partial(subprocess.run, check=True, shell=True)
+
+
+SCRIPT_DIR = os.path.dirname(__file__)
+
+
+def get_arguments(func):
+    return getattr(func, "_argparse_args", ())
+
+
+def argument(*args, **kwargs):
+    def wrapper(func):
+        func._argparse_args = get_arguments(func) + ((args, kwargs),)
+        return func
+
+    return wrapper
+
+
+def docker(cmd, image="flategy-app", port=None, detach=None):
+    args = []
+    args += ["-v", f"{os.getcwd()}:/work", "-w", "/work"]
+    args += ["--user", "$(id -u):$(id -g)", "--group-add", "users"]
+    if detach:
+        args += ["-d", "--name", detach]
+    else:
+        args += ["--rm", "-it"]
+    if port:
+        args += ["-p", f"{port}:{port}"]
+    sh(f"docker run {' '.join(args)} {image} {cmd}")
+
+
+# Commands
+
+
+@argument(
+    "-n",
+    "--name",
+    dest="names",
+    nargs="+",
+    choices=("app", "notebook"),
+    default=("app", "notebook"),
+)
+def build_image(names):
+    """build the Docker image(s), used by the rest of the build"""
+    for name in names:
+        sh(
+            f"docker build --rm -t flategy-{name}"
+            f" -f {SCRIPT_DIR}/{name}.dockerfile {SCRIPT_DIR}"
+        )
+
+
+def deps():
+    """refresh all dependencies"""
+    docker("cargo vendor")
+
+
+@argument("cmd", nargs="*", help="command to run")
+def run(cmd):
+    """run an arbitary command in the main Docker image"""
+    docker(" ".join(cmd))
+
+
+def check():
+    """run all pre-commit checks (and the autoformatter)"""
+    docker("cargo build")
+    docker("cargo test --lib")
+    docker("cargo fmt")
+
+
+def server():
+    """run the dev server"""
+    sh("docker rm -f flategy-server || true")
+    docker("cargo run --bin server", port=8000, detach="flategy-server")
+
+
+@argument("-p", "--port", type=int, default=8888, help="port to open")
+def notebook(port):
+    """run the notebook server"""
+    sh("docker rm -f flategy-notebook || true")
+    docker(
+        f"jupyter lab --allow-root --ip '*' --port {port}",
+        port=port,
+        detach="flategy-notebook",
+        image="flategy-notebook",
+    )
+    time.sleep(3)
+    sh("docker logs flategy-notebook 2>&1 | grep '\\?token='")
+
+
+# Main run script
+
+
+COMMANDS = [build_image, deps, run, check, server, notebook]
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.set_defaults(_action=lambda: run([]))
+    subparsers = parser.add_subparsers()
+    for command in COMMANDS:
+        name = command.__name__.replace("_", "-")
+        subparser = subparsers.add_parser(name, help=command.__doc__)
+        for (args, kwargs) in get_arguments(command):
+            subparser.add_argument(*args, **kwargs)
+        subparser.set_defaults(_action=command)
+    args = vars(parser.parse_args())
+    action = args.pop("_action")
+    action(**args)
+
+
+if __name__ == "__main__":
+    main()

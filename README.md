@@ -2,13 +2,15 @@
 
 ## Development
 
-We tend to use Rust in Docker:
+We tend to use Rust in Docker, managed through `tools/run`:
 
 ```bash
-$ ./tools/run.sh
-  $ cargo test --lib
-  $ cargo run --bin mapgen
-  $ cargo fmt
+$ ./tools/run --help
 
-$ ./tools/notebook.sh
+$ ./tools/run build-image
+$ ./tools/run deps
+$ ./tools/run check
+
+$ ./tools/run server
+$ ./tools/run notebook
 ```
